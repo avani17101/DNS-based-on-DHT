@@ -1,5 +1,6 @@
 import Pyro4
 import sys
+import codecs
 
 f_u = open('uri.txt')
 uri = f_u.read()
@@ -7,42 +8,55 @@ uri = uri.replace('\n','')
 f_u.close()
 Server = Pyro4.Proxy(uri)  # get a Pyro proxy to the greeting object
 
-# infile  = sys.argv[1]
-# outfile = sys.argv[2]
-# f = open(infile)
-# f2 = open(outfile,'w+')
-# f2.close()
+site = input('enter site') 
 
-# add nodes
-site = 'google.com'
-nodeid1 = '\x01'*16
-ip1 = '8.8.8.8'
-port1 = 8080
+lis = [1,2,3,4]
+action = int(input("choose action to perform- 1: enter nodes on new site \n 2: add more nodes to an existing site \n 3: Route a node \n 4: get routing table items \n"))
+if action not in lis:
+    print("enter number btw 1-4 only")
+if action == 1:  #nodes on new site
+    numNodes = input('enter number of nodes to enter ')
+    nodes = []
+    for i in range(len(numNodes)):
+        nodeid = codecs.decode(input('enter node id '), 'unicode_escape')
+        nodeid = nodeid*16
+        ip = input('enter ip ')
+        port = int(input('enter port '))
+        node = [nodeid, ip, port]
+        nodes.append(node)
 
-node1 = [nodeid1, ip1, port1]
-nodeid2 = '\x02'*16
-ip2 = '8.8.4.4'
-port2 = 5353
-node2 = [nodeid2, ip2, port2]
+    Server.add_nodes(site,nodes)
+    print("added nodes: ",nodes)
+    print("routing table elements \n")
+    lis = Server.get_routing_table_items()
+    print(lis)
 
-Server.add_nodes(site,[node1, node2])
+if action == 2: # add more nodes to an existing site
+    numNodes = input('enter number of nodes to enter ')
+    nodes = []
+    for i in range(len(numNodes)):
+        nodeid = codecs.decode(input('enter node id '), 'unicode_escape')
+        nodeid = nodeid*16
+        ip = input('enter ip ')
+        port = int(input('enter port '))
+        node = [nodeid, ip, port]
+        nodes.append(node)
 
+    Server.update_nodes(nodes)
+    print("added nodes:",nodes)
+    print("routing table elements \n")
+    lis = Server.get_routing_table_items()
+    print(lis)
+    
+if action == 3:  # route node
+    nodeid = codecs.decode(input('enter node id '), 'unicode_escape')
+    nodeid = nodeid*16
+    Server.route_node(nodeid)
 
-# Update node
-site = 'facebook.com'
-nodeid3 = '\x03'*16
-ip2 = '10.20.20.2'
-port = 8081
-Server.update_nodes([[nodeid3, ip2, port]])
+if action == 4:  # get routing table items
+    lis = Server.get_routing_table_items()
+    print(lis)
 
-
-# route node
-Server.route_node(nodeid3)
-
-           
-# get routing table items
-lis = Server.get_routing_table_items()
-print(lis)
 
 # find the next hop; key does not need to be exact
 # key_lis = ['\x01'*15, '\x00']  # key is addition of items in key

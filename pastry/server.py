@@ -12,7 +12,6 @@ class Server(object):
         for node in nodes:
             nodeid, ip, port = node
             peers[bytes(nodeid, 'utf-8')] = (ip, port)
-
         self.pastry =  Pastry(bytes(site, 'utf-8'), peers = peers)
 
     def update_nodes(self, nodes):
@@ -28,16 +27,6 @@ class Server(object):
     def get_routing_table_items(self):
         print(list(self.pastry.routing_table.items()))
         return list(self.pastry.routing_table.items())
-
-    # def find_nextHop(self, key_lis):
-        
-    #     for i in range(len(key_lis)):
-    #         nodeid += bytes(key_lis[i], 'utf-8')
-
-    #     self.pastry.route()
-       
-    
-    
 
 daemon = Pyro4.Daemon()         # make a Pyro daemon
 uri = daemon.register(Server)   # register the greeting maker as a Pyro object
