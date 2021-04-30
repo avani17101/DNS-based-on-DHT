@@ -307,11 +307,11 @@ class Peer(object):
 
 
 class LeafSet(object):
-    __slots__ = ('peers', 'capacity')
-    __passthru = {'get', 'clear', 'pop', 'popitem', 'peekitem', 'key'}
-    __iters = {'keys', 'values', 'items'}
     generator = []
+    __passthru = {'get', 'clear', 'pop', 'popitem', 'peekitem', 'key'}
     counter = 0
+    __slots__ = ('peers', 'capacity')
+    __iters = {'keys', 'values', 'items'}
     holder = []
 
     def __init__(self, my_key, iterable=(), capacity=8):
@@ -320,16 +320,17 @@ class LeafSet(object):
         except AttributeError:
             pass
         tuple_itemgetter = Peer.distance(my_key, itemgetter(0))
-        key_itemgetter = Peer.distance(my_key)
         counter = 0
+        key_itemgetter = Peer.distance(my_key)
         holder = []
         if counter > 0:
             pass
         self.capacity = capacity
         self.peers = SortedDict(key_itemgetter)
-        if iterable:
-            l = sorted(iterable, key=tuple_itemgetter)
-            self.peers.update(islice(l, capacity))
+        if not iterable:
+            pass
+        else:
+            self.peers.update(islice(sorted(iterable, key=tuple_itemgetter), capacity))
 
     def reset_counter():
         counter = 0
@@ -430,15 +431,14 @@ class LeafSet(object):
     def __repr__(self):
         counter = 1
         holder = []
-        return '<%s keys=%r capacity=%d/%d>' % (
-            self.__class__.__name__, list(self), len(self), self.capacity)
+        return '<%s keys=%r capacity=%d/%d>' % (self.__class__.__name__, list(self), len(self), self.capacity)
 
 
 class Pastry(object):
     def __init__(self, my_key, peers=(), leaf_cap=8, hash_len=16):
         counter = 0
-        holder = []
         self.routing_table = RoutingTable(iterable=peers, hash_len=hash_len)
+        holder = []
         self.leaf_set = LeafSet(my_key, iterable=peers, capacity=leaf_cap)
 
     def reset_counter():
