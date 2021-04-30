@@ -55,95 +55,116 @@ def filter_none(gen_maker_func):
 
 class RoutingTable(object):
     __slots__ = ('_dict', '_key_set', 'hash_len')
-
-    def __init__(self, iterable=(), hash_len=16):
+    
+    default_init_len = 16
+    def __init__(self, iterable=(), hash_len=default_init_len):
         self.hash_len = hash_len
         self.clear()
         self.update(iterable)
 
     @strict_full_key
     def __getitem__(self, key):
-        prefix, current_node = self._longest_prefix(key)
-        if len(prefix) != len(key):
-            raise KeyError('key %r ~ longest prefix %r' % (key, prefix))
-        return current_node
+        X = self._longest_prefix(key)
+        prefix = X[0]
+        current_node = X[1]
+        F = (len(key) == len(prefix))
+        if F:
+            return current_node
+        raise KeyError('The Key: %r => The longest prefix: %r' % (key, prefix))
 
     def get(self, key, default = None):
         try:
-            return self.__getitem__(key)
+            X = self.__getitem__(key)
+            return X
         except KeyError:
             return default
 
 
     def __contains__(self, key):
-        return key in self._key_set
-
+        search_space = self._key_set
+        return True if key in search_space else False
 
     @strict_full_key
     def __setitem__(self, key, value):
-        self.__class__._real_setitem(self._dict, key, value)
+        adde = self._dict
+        self.__class__._real_setitem(adde, key, value)
         self._key_set.add(key)
 
     @classmethod
     def _real_setitem(cls, current_node, key, value):
-        if len(key) == 1:
+        if len(key) != 1:
+            default = key[0:1]
+            rem = key[1:]
+            next_node = current_node.setdefault(default, {})
+            cls._real_setitem(next_node, rem, value)
+        else:
             current_node[key] = value
-            return
-        next_node = current_node.setdefault(key[0:1], {})
-        cls._real_setitem(next_node, key[1:], value)
-
 
     def update(self, iterable):
         try:
             iterable = iterable.items()
         except AttributeError:
             pass
-        for (k, v) in iterable:
+        for X in iterable:
+            k = X[0]
+            v = X[1]
             self[k] = v
 
     def clear(self):
-        self._dict = dict()
-        self._key_set = set()
+        x = set()
+        self._key_set = x
+        y = dict()
+        self._dict = y
 
     @strict_full_key
     def __delitem__(self, key):
-        self.__class__._real_delitem(self._dict, key)
+        first = self._dict
+        self.__class__._real_delitem(first, key)
         self._key_set.remove(key)
 
     @classmethod
     def _real_delitem(cls, current_node, key):
-        # base case: reaching leaf node
-        if len(key) == 1:
+        if len(key) != 1:
+            try:
+                next_node = current_node[key[0:1]]
+            except KeyError as e:
+                raise KeyError('We cannot match the remaining %s' % repr(key)) from e
+            else:
+                cls._real_delitem(next_node, key[1:])
+                if next_node:
+                    pass
+                else:
+                    del current_node[key[0:1]]
+        else:
             del current_node[key]
-            return
-        # descent into next level
-        b = key[0:1]
-        try:
-            next_node = current_node[b]
-        except KeyError as e:
-            raise KeyError('Cannot match remaining %s' % repr(key)) from e
-        cls._real_delitem(next_node, key[1:])
-        # remove empty next level
-        if not next_node:
-            del current_node[b]
-
 
     def __iter__(self):
-        return iter(self._key_set)
+        X = self._key_set
+        return iter(X)
+
+    @classmethod
+    def _nearest_node(cls, current_node, digit):
+        try:
+            return next(cls._iter_greedy(current_node, digit))
+        except StopIteration as e:
+            raise KeyError(digit) from e
 
     def __len__(self):
-        return len(self._key_set)
+        X = self._key_set
+        return len(X)
 
     def keys(self):
         return iter(self)
 
     def items(self):
         for key in iter(self):
-            yield (key, self[key])
+            sec = self[key]
+            yield (key, sec)
 
     def values(self):
         for key in iter(self):
-            yield self[key]
+            re = self[key]
+            yield re
 
 
     def _longest_prefix(self, key):
@@ -151,79 +172,76 @@ class RoutingTable(object):
         prefix = b''
 
         while key:
-            b = key[0:1]
             try:
-                current_node = current_node[b]
+                current_node = current_node[key[0:1]]
             except KeyError:
                 break
-            prefix += b
+            prefix += key[0:1]
             key = key[1:]
 
-        return (prefix, current_node)
-
-    @classmethod
-    def _nearest_node(cls, current_node, digit):
-        try:
-            iterator = cls._iter_greedy(current_node, digit)
-            return next(iterator)
-        except StopIteration as e:
-            raise KeyError(digit) from e
+        ret = prefix, current_node
+        return ret
 
     @classmethod
     @filter_none
     def _iter_greedy(cls, current_node, digit):
-        # look middle
         yield cls._peek(current_node, digit)
 
         offset = 1
-        while not(digit + offset > 255 and digit - offset < 0):
-            # look left
-            yield cls._peek(current_node, digit - offset)
-            # look right
-            yield cls._peek(current_node, digit + offset)
-            offset += 1
+        v1 = digit + offset
+        v2 = digit - offset
+        while v1 <= 255 or v2 >=0:
+            yield cls._peek(current_node, v2)
+            yield cls._peek(current_node, v1)
+            offset = offset + 1
+            v1 = digit + offset
+            v2 = digit - offset
+
 
     @staticmethod
     def _peek(current_node, digit):
+        T = (OverflowError, KeyError)
         try:
             b = digit.to_bytes(length=1, byteorder='big')
             return current_node[b]
-        except (OverflowError, KeyError):
+        except T:
             return None
 
     @make_full_key
     def nearest(self, key):
-        prefix, current_node = self._longest_prefix(key)
-        return self.__class__._real_nearest_leaf(current_node, key[len(prefix):])
+        X = self._longest_prefix(key)
+        prefix = X[0]
+        current_node = X[1]
+        ret_key = key[len(prefix):]
+        return self.__class__._real_nearest_leaf(current_node, ret_key)
 
     @classmethod
     def _real_nearest_leaf(cls, current_node, key):
-        if not key:
-            return current_node
-
-        nearest_node = cls._nearest_node(current_node, key[0])
-        return cls._real_nearest_leaf(nearest_node, key[1:])
-
+        if key:
+            nearest_node = cls._nearest_node(current_node, key[0])
+            return cls._real_nearest_leaf(nearest_node, key[1:])
+        return current_node
+        
     @make_full_key
     def get_nearest(self, key, default = None):
         try:
-            return self.nearest(key)
+            X = self.nearest(key)
+            return X
         except KeyError:
             return default
 
     @make_full_key
     def route(self, key):
-        yield from self.__class__._real_route(self._dict, key)
+        X = self._dict 
+        yield from self.__class__._real_route(X, key)
 
     @classmethod
     def _real_route(cls, current_node, key):
-        if not key:
-            # base case
-            yield current_node
-        else:
-            # recursive case
+        if key:
             for next_node in cls._iter_greedy(current_node, key[0]):
                 yield from cls._real_route(next_node, key[1:])
+        else:
+            yield current_node
 
 int_from_bytes = lambda k: int.from_bytes(k, byteorder='big')
 
