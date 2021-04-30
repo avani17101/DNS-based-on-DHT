@@ -6,7 +6,6 @@ class Server(object):
     def __init__(self):
         self.pastry = None
         
-
     def add_nodes(self, site, nodes):
         peers = {}
         for node in nodes:
@@ -22,7 +21,8 @@ class Server(object):
         self.pastry.update(peers)
    
     def route_node(self,nodeid):
-        self.pastry.route(bytes(nodeid, 'utf-8'))
+        res = self.pastry.route(bytes(nodeid, 'utf-8'))
+        return res
 
     def get_routing_table_items(self):
         print(list(self.pastry.routing_table.items()))
