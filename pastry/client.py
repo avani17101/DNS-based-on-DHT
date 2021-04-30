@@ -20,7 +20,7 @@ while True:
         numNodes = int(input('enter number of nodes '))
         nodes = []
         for i in range(numNodes):
-            nodeid = codecs.decode(input('enter node id ',i+1), 'unicode_escape')
+            nodeid = codecs.decode(input('enter node id ',), 'unicode_escape')
             nodeid = nodeid*16
             ip = input('enter ip ')
             port = int(input('enter port '))

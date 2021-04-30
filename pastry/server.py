@@ -6,6 +6,7 @@ class Server(object):
     def __init__(self):
         self.pastry = None
         
+
     def add_nodes(self, site, nodes):
         peers = {}
         for node in nodes:
